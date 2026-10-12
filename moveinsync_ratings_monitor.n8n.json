@@ -1,0 +1,353 @@
+{
+  "name": "MoveInSync Play Store ratings monitor",
+  "nodes": [
+    {
+      "id": "06351ca9-d1dc-4c59-9f05-7d5d77e4de6d",
+      "name": "Setup notes",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -260
+      ],
+      "parameters": {
+        "width": 560,
+        "height": 300,
+        "content": "## MoveInSync ratings monitor\n1. Self-hosted n8n only (Execute Command is disabled on n8n Cloud).\n2. Open **Config** and set project_dir, slack_webhook_url, gemini_api_key.\n3. Set GEMINI_API_KEY as a system environment variable before starting n8n so the pipeline can tag reviews with Gemini.\n4. Click **Test workflow** once, then Activate for the Monday 09:00 schedule.\n5. Replies are DRAFTS only. A human approves and posts them."
+      }
+    },
+    {
+      "id": "baa83f24-1257-4335-90ee-edcdf9865e89",
+      "name": "Manual run",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        160
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "c0375a42-59a6-4385-8264-135bf87df634",
+      "name": "Every Monday 9am",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        340
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 9
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "dc58c36f-1911-4816-a691-6f8befea103e",
+      "name": "Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        260,
+        250
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e3e815aa-722c-44ed-ad62-09ec2614e236",
+              "name": "project_dir",
+              "value": "C:/Users/mohdi/Downloads/xyz",
+              "type": "string"
+            },
+            {
+              "id": "186de4a5-3833-467a-bf05-4dd193ae26f2",
+              "name": "slack_webhook_url",
+              "value": "PASTE_SLACK_INCOMING_WEBHOOK_URL",
+              "type": "string"
+            },
+            {
+              "id": "a578611f-bce3-471a-ac59-e3fec7971be4",
+              "name": "gemini_api_key",
+              "value": "PASTE_GEMINI_API_KEY",
+              "type": "string"
+            },
+            {
+              "id": "c29c3421-c786-430c-9bda-c3bf295e23af",
+              "name": "drop_threshold_stars",
+              "value": 0.1,
+              "type": "number"
+            },
+            {
+              "id": "2ce6d44f-55d8-406d-86b4-e3659ca4a590",
+              "name": "theme_threshold_pts",
+              "value": 3,
+              "type": "number"
+            },
+            {
+              "id": "gm1",
+              "name": "gemini_model",
+              "value": "gemini-3.8-flash",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "d310095c-e553-4bd4-9198-a5e54b9ea4b3",
+      "name": "Run pipeline",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        520,
+        250
+      ],
+      "parameters": {
+        "command": "=python \"{{ $json.project_dir }}/moveinsync_ratings_pipeline.py\""
+      }
+    },
+    {
+      "id": "4f62db9a-2167-4a0a-aefd-4194a564ea7e",
+      "name": "Parse metrics",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        250
+      ],
+      "parameters": {
+        "jsCode": "const r = $input.first().json;\nconst out = r.stdout || '';\nconst line = out.split('\\n').reverse().find(l => l.startsWith('METRICS_JSON:'));\nif (!line) throw new Error('No METRICS_JSON line in pipeline output. exitCode=' + r.exitCode + '. ' + 'Most likely n8n is running an OLD copy of moveinsync_ratings_pipeline.py (search it for METRICS_JSON) or project_dir points to the wrong folder. ' + 'stdout tail: ' + out.slice(-400) + ' | stderr tail: ' + String(r.stderr || '').slice(-400));\nconst m = JSON.parse(line.slice(13));\nconst cfg = $('Config').first().json;\nconst drop = (m.prior_avg !== null && m.prior_avg !== undefined) ? +(m.prior_avg - m.cur_avg).toFixed(2) : 0;\nconst rising = (m.themes || []).filter(t => t.change >= Number(cfg.theme_threshold_pts));\nconst badVersions = (m.worst_versions || []).filter(v => v.avg <= m.cur_avg - 0.3);\nconst alert = drop >= Number(cfg.drop_threshold_stars) || rising.length > 0 || badVersions.length > 0;\nreturn [{ json: { ...m, drop, rising, badVersions, alert } }];"
+      }
+    },
+    {
+      "id": "e5df1ee9-fc7e-42ff-b806-5ec336fb12c8",
+      "name": "Alert needed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1040,
+        250
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "098dda6b-8a66-4742-965e-41286fc8245f",
+              "leftValue": "={{ $json.alert }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "0fd35226-4149-4116-9f19-dff72cf4b4d5",
+      "name": "Gemini brief",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        150
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/{{ $('Config').first().json.gemini_model }}:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "={{ $('Config').first().json.gemini_api_key }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ contents: [{ parts: [{ text: \"You are a senior product analyst for MoveInSync's employee commute app. A product and engineering team will act on your report tomorrow, so be specific and plain-spoken. Using ONLY the data below, return JSON with these keys: summary (3 to 4 sentences, max 90 words: what is happening, whether it is getting better or worse, and the single biggest reason); causes (array of 3 to 4 objects {theme, explanation, evidence}: theme must be one of the theme keys in the data; explanation max 50 words saying what reviewers actually complain about, drawing on the verbatims; evidence max 20 words citing the numbers); version_note (max 40 words on any app version rating well below average and what that suggests, or an empty string); actions (array of 4 to 6 objects {priority, department, action, first_step, metric, timeline}: priority is P1, P2 or P3; department is exactly one of Engineering, Product, Operations (transport desk), Customer Support, Safety; action max 35 words; first_step is what that team does tomorrow, max 30 words; metric is how they will know it worked, max 20 words; timeline is Today, This week or This month; order by priority; if reply_rate is below 20 include a Customer Support action to answer unreplied reviews); replies (array of up to 3 objects {id, reply} for the items in unreplied_negatives; each reply under 40 words, polite, makes no promise of a fix, and asks the user to raise a ticket in the app); watch_next_week (max 30 words on what to check next week). No markdown. Do not invent numbers.\" + \"\\n\\nDATA:\\n\" + JSON.stringify($json) }] }], generationConfig: { responseMimeType: \"application/json\", maxOutputTokens: 8000 } }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "9c64aadc-d6e0-470a-a95b-6687e391e6d4",
+      "name": "Build alert message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        150
+      ],
+      "parameters": {
+        "jsCode": "const m = $('Parse metrics').first().json;\nconst g = $input.first().json;\nconst raw = g.candidates?.[0]?.content?.parts?.[0]?.text || '';\nlet a = null;\ntry { a = JSON.parse(raw); } catch (e) {}\nconst esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst cut = (s, n) => esc(String(s ?? '').trim().slice(0, n));\nconst pct = x => (x === null || x === undefined) ? 'n/a' : (x < 1 ? x.toFixed(2) : x.toFixed(1)) + '%';\nconst label = t => String(t).replace(/_/g, ' ').replace(/\\b\\w/g, c => c.toUpperCase());\nconst sign = x => (x > 0 ? '+' : '') + x;\n\nconst reasons = [];\nif (m.drop > 0) reasons.push(`average down ${m.drop}`);\nif ((m.rising || []).length) reasons.push(`rising: ${m.rising.map(t => label(t.theme)).join(', ')}`);\nif ((m.badVersions || []).length) reasons.push(`weak version: v${m.badVersions[0].version}`);\n\nconst blocks = [\n  { type: 'header', text: { type: 'plain_text', text: `Play Store ratings report \u00b7 ${m.date}` } },\n  { type: 'section', fields: [\n    { type: 'mrkdwn', text: `*Recent average*\\n${m.cur_avg} (prior ${m.prior_avg})` },\n    { type: 'mrkdwn', text: `*Lifetime store rating*\\n${m.store_rating}` },\n    { type: 'mrkdwn', text: `*1-2 star share*\\n${pct(m.neg_share_cur)} (prior ${pct(m.neg_share_prior)})` },\n    { type: 'mrkdwn', text: `*Reviews analysed*\\n${m.cur_reviews}` },\n    { type: 'mrkdwn', text: `*Developer reply rate*\\n${pct(m.reply_rate)}` },\n    { type: 'mrkdwn', text: `*Why this report fired*\\n${reasons.join('; ') || 'routine weekly report'}` } ] },\n];\n\nif (!a) {\n  blocks.push({ type: 'section', text: { type: 'mrkdwn', text: cut(raw, 2800) || 'Gemini returned no text.' } });\n  return [{ json: { text: `Play Store ratings report ${m.date}`, blocks } }];\n}\n\nblocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*What is happening*\\n${cut(a.summary, 1200)}` } });\nblocks.push({ type: 'divider' });\n\nconst stat = {}; (m.themes || []).forEach(t => { stat[t.theme] = t; });\nconst causes = (a.causes || []).slice(0, 4).map((c, i) => {\n  const s = stat[c.theme];\n  const nums = s ? ` \u00b7 ${s.share_now}% of 1-2 star reviews (${sign(s.change)} pts vs prior)` : '';\n  return `*${i + 1}. ${label(c.theme || 'cause')}*${nums}\\n${cut(c.explanation, 500)}` + (c.evidence ? `\\n_${cut(c.evidence, 200)}_` : '');\n}).join('\\n\\n');\nif (causes) blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*Why the ratings are where they are*\\n\\n${causes}`.slice(0, 2900) } });\n\nif ((m.worst_versions || []).length) {\n  const lines = m.worst_versions.map(v => `\u2022 v${esc(v.version)}: ${v.avg} average from ${v.reviews} reviews`).join('\\n');\n  blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*Worst-rated app versions*\\n${lines}` + (a.version_note ? `\\n${cut(a.version_note, 400)}` : '') } });\n}\nblocks.push({ type: 'divider' });\n\nconst rank = { P1: 1, P2: 2, P3: 3 };\nconst actions = (a.actions || []).slice(0, 6).sort((x, y) => (rank[x.priority] || 9) - (rank[y.priority] || 9));\nconst depts = [...new Set(actions.map(x => x.department).filter(Boolean))];\nblocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*Next actions, by department*\\nDepartments involved: ${esc(depts.join(', ') || 'n/a')}` } });\nactions.forEach(x => {\n  blocks.push({ type: 'section', text: { type: 'mrkdwn', text:\n    `*${cut(x.priority, 3)} \u00b7 ${cut(x.department, 40)}* \u00b7 ${cut(x.timeline, 20)}\\n${cut(x.action, 400)}\\n*First step:* ${cut(x.first_step, 300)}\\n*How we will know it worked:* ${cut(x.metric, 200)}` } });\n});\n\nconst replies = (a.replies || []).slice(0, 3);\nif (replies.length) {\n  blocks.push({ type: 'divider' });\n  blocks.push({ type: 'section', text: { type: 'mrkdwn', text: '*Draft replies, a human must approve before posting*\\n' + replies.map(r => `\u2022 \\`${esc(String(r.id).slice(0, 8))}\\` ${cut(r.reply, 400)}`).join('\\n') } });\n}\nconst tail = [a.watch_next_week ? `*Watch next week:* ${cut(a.watch_next_week, 300)}` : '', 'Generated by n8n and Gemini from public Play Store reviews. Theme tags are AI-assisted; spot-check them in the dashboard.'].filter(Boolean).join('\\n');\nblocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: tail }] });\n\nreturn [{ json: { text: `Play Store ratings report ${m.date}: avg ${m.cur_avg} (prior ${m.prior_avg})`, blocks } }];"
+      }
+    },
+    {
+      "id": "3bc8c46d-9143-43bd-9e46-bf1a3b7ae570",
+      "name": "Build stable message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1300,
+        370
+      ],
+      "parameters": {
+        "jsCode": "const m = $input.first().json;\nconst pct = x => (x === null || x === undefined) ? 'n/a' : (x < 1 ? x.toFixed(2) : x.toFixed(1)) + '%';\nconst label = t => String(t).replace(/_/g, ' ').replace(/\\b\\w/g, c => c.toUpperCase());\nconst sign = x => (x > 0 ? '+' : '') + x;\nconst themes = (m.themes || []).slice(0, 4).map(t => `\u2022 *${label(t.theme)}*: ${t.share_now}% of 1-2 star reviews (${sign(t.change)} pts vs prior)`).join('\\n');\nconst vers = (m.worst_versions || []).map(v => `\u2022 v${v.version}: ${v.avg} average from ${v.reviews} reviews`).join('\\n');\nconst blocks = [\n  { type: 'header', text: { type: 'plain_text', text: `Play Store ratings stable \u00b7 ${m.date}` } },\n  { type: 'section', fields: [\n    { type: 'mrkdwn', text: `*Recent average*\\n${m.cur_avg} (prior ${m.prior_avg})` },\n    { type: 'mrkdwn', text: `*Lifetime store rating*\\n${m.store_rating}` },\n    { type: 'mrkdwn', text: `*1-2 star share*\\n${pct(m.neg_share_cur)} (prior ${pct(m.neg_share_prior)})` },\n    { type: 'mrkdwn', text: `*Reviews analysed*\\n${m.cur_reviews}` },\n    { type: 'mrkdwn', text: `*Developer reply rate*\\n${pct(m.reply_rate)}` } ] },\n];\nif (themes) blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*Top complaint themes this period*\\n${themes}` } });\nif (vers) blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*Lowest-rated app versions*\\n${vers}` } });\nblocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: 'No alert: no rating drop above threshold, no rising theme and no weak app version this week.' }] });\nreturn [{ json: { text: `Play Store ratings stable ${m.date}: avg ${m.cur_avg} (prior ${m.prior_avg})`, blocks } }];"
+      }
+    },
+    {
+      "id": "fd1d1b75-24d8-4928-b45b-cfa23a894b3c",
+      "name": "Send to Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1820,
+        250
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Config').first().json.slack_webhook_url }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: $json.text, blocks: $json.blocks }) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Manual run": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every Monday 9am": {
+      "main": [
+        [
+          {
+            "node": "Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config": {
+      "main": [
+        [
+          {
+            "node": "Run pipeline",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run pipeline": {
+      "main": [
+        [
+          {
+            "node": "Parse metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse metrics": {
+      "main": [
+        [
+          {
+            "node": "Alert needed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert needed?": {
+      "main": [
+        [
+          {
+            "node": "Gemini brief",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build stable message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini brief": {
+      "main": [
+        [
+          {
+            "node": "Build alert message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build alert message": {
+      "main": [
+        [
+          {
+            "node": "Send to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build stable message": {
+      "main": [
+        [
+          {
+            "node": "Send to Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

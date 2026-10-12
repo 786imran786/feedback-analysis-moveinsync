@@ -1,0 +1,99 @@
+{
+  "date": "2026-10-12",
+  "store_rating": 4.64,
+  "cur_avg": 3.81,
+  "prior_avg": 3.82,
+  "cur_reviews": 721,
+  "neg_share_cur": 28.43,
+  "neg_share_prior": 26.86,
+  "reply_rate": 0.55,
+  "themes": [
+    {
+      "theme": "app_crash_perf",
+      "share_now": 24.4,
+      "share_prior": 23.0,
+      "change": 1.4
+    },
+    {
+      "theme": "booking_fails",
+      "share_now": 15.6,
+      "share_prior": 12.4,
+      "change": 3.2
+    },
+    {
+      "theme": "tracking_gps",
+      "share_now": 12.7,
+      "share_prior": 14.3,
+      "change": -1.6
+    },
+    {
+      "theme": "late_or_no_cab",
+      "share_now": 10.2,
+      "share_prior": 5.1,
+      "change": 5.1
+    },
+    {
+      "theme": "login_otp_sso",
+      "share_now": 9.3,
+      "share_prior": 11.5,
+      "change": -2.2
+    },
+    {
+      "theme": "route_pickup_time",
+      "share_now": 8.3,
+      "share_prior": 7.8,
+      "change": 0.5
+    }
+  ],
+  "worst_versions": [
+    {
+      "version": "12.14.0",
+      "avg": 3.37,
+      "reviews": 38
+    },
+    {
+      "version": "12.2",
+      "avg": 3.4,
+      "reviews": 35
+    },
+    {
+      "version": "12.7",
+      "avg": 3.5,
+      "reviews": 38
+    }
+  ],
+  "verbatims": {
+    "app_crash_perf": [
+      "There should be an option to directly search for seat number instead of using the map. There should be an option to set default floor in app and portal. Multiple times for multiple people, the seat nu",
+      "dislike the new update. Bring the old version back. It was simple and minimalist.",
+      "again and again it's getting stopped.. showing that it can't open as it is not downloaded from playstore. in last 3 weeks I uninstall an installed it for 10 times due to the same error"
+    ],
+    "booking_fails": [
+      "There should be an option to directly search for seat number instead of using the map. There should be an option to set default floor in app and portal. Multiple times for multiple people, the seat nu",
+      "does not let you book a bus if location accuracy is off. why do you need location accuracy? are you going to bring the bus to my house? well it does not even let you scan QR code now without location ",
+      "the new update looks confusing including the font color of \"logout\" is red like the font color of \"cancel\" Also the \"book\" tab became smaller"
+    ],
+    "tracking_gps": [
+      "There should be an option to directly search for seat number instead of using the map. There should be an option to set default floor in app and portal. Multiple times for multiple people, the seat nu",
+      "Worst mapping",
+      "does not let you book a bus if location accuracy is off. why do you need location accuracy? are you going to bring the bus to my house? well it does not even let you scan QR code now without location "
+    ]
+  },
+  "unreplied_negatives": [
+    {
+      "id": "da4ad9ad-acbe-4600-8d32-46883fab9fdd",
+      "score": 1,
+      "text": "There should be an option to directly search for seat number instead of using the map. There should be an option to set default floor in app and portal. Multiple times for multiple people, the seat number (booking shows but without desk allocation) g"
+    },
+    {
+      "id": "66e6cdc7-e911-4b93-82c7-01d7f9420284",
+      "score": 1,
+      "text": "Worst mapping"
+    },
+    {
+      "id": "5f781610-319a-4412-b308-95a6ec8ee6f6",
+      "score": 1,
+      "text": "dislike the new update. Bring the old version back. It was simple and minimalist."
+    }
+  ]
+}
