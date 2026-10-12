@@ -1,6 +1,0 @@
-C:\Users\mohdi\Downloads\xyz\moveinsync_ratings_pipeline.py:268: DeprecationWarning: The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.
-  cur = df[df["at"] > now - pd.Timedelta(days=LOOKBACK_DAYS)]
-C:\Users\mohdi\Downloads\xyz\moveinsync_ratings_pipeline.py:270: DeprecationWarning: The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.
-  pri = df[(df["at"] <= now - pd.Timedelta(days=LOOKBACK_DAYS)) &
-C:\Users\mohdi\Downloads\xyz\moveinsync_ratings_pipeline.py:272: DeprecationWarning: The 'generic' unit for NumPy timedelta is deprecated, and will raise an error in the future. This includes implicit conversion of bare integers (e.g. `+ 1`).Please use a specific unit instead.
-  (df["at"] > now - pd.Timedelta(days=2*LOOKBACK_DAYS))]
